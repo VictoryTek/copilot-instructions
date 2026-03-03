@@ -56,20 +56,151 @@ Repository Notes:
 
 Every user request MUST follow this workflow:
 
-1. Phase 1 – Research & Specification  
-2. Phase 2 – Implementation  
-3. Phase 3 – Review  
-4. Phase 4 – Refinement (if needed)  
-5. Phase 5 – Re-Review  
-6. Phase 6 – Preflight Validation (FINAL GATE)  
-
-Maximum refinement cycles per phase: **2**
-
-If still failing after 2 cycles → escalate to user.
-
-Each subagent operates with fresh context.  
-Context is passed strictly via documentation file paths.
-
+┌─────────────────────────────────────────────────────────────┐
+│ USER REQUEST                                                │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│ PHASE 1: RESEARCH & SPECIFICATION                                   │
+│ Subagent #1 (fresh context)                                         │
+│ • Reads and analyzes relevant codebase files                        │
+│ • Researches minimum 6 credible sources                             │
+│ • Designs architecture and implementation approach                  │
+│ • Documents findings in:                                            │
+│   .github/docs/SubAgent docs/[FEATURE_NAME]_spec.md                 │
+│ • Returns: summary + spec file path                                 │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR: Receive spec, spawn implementation subagent   │
+│ • Extract and pass exact spec file path                     │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 2: IMPLEMENTATION                                     │
+│ Subagent #2 (fresh context)                                 │
+│ • Reads spec from:                                          │
+│   .github/docs/SubAgent docs/[FEATURE_NAME]_spec.md         │
+│ • Implements all changes strictly per specification         │
+│ • Ensures build compatibility                               │
+│ • Returns: summary + list of modified file paths            │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR: Receive changes, spawn review subagent        │
+│ • Pass modified file paths + spec path                      │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 3: REVIEW & QUALITY ASSURANCE                         │
+│ Subagent #3 (fresh context)                                 │
+│ • Reviews implemented code at specified paths               │
+│ • Validates: best practices, consistency, maintainability   │
+│ • Runs build + tests (basic validation)                     │
+│ • Documents review in:                                      │
+│   .github/docs/SubAgent docs/[FEATURE_NAME]_review.md       │
+│ • Returns: findings + PASS / NEEDS_REFINEMENT               │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+                  ┌────────┴────────────┐
+                  │ Issues Found?       │
+                  │ (Build failure =    │
+                  │  automatic YES)     │
+                  └────────┬────────────┘
+                           │
+                ┌──────────┴──────────┐
+                │                     │
+               YES                   NO
+                │                     │
+                ↓                     ↓
+┌─────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR: Spawn refinement subagent                     │
+│ • Pass review findings                                      │
+│ • Max 2 refinement cycles                                   │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 4: REFINEMENT                                         │
+│ Subagent #4 (fresh context)                                 │
+│ • Reads review findings                                     │
+│ • Fixes ALL CRITICAL issues                                 │
+│ • Implements RECOMMENDED improvements                       │
+│ • Returns: summary + updated file paths                     │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR: Spawn re-review subagent                      │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 5: RE-REVIEW                                          │
+│ Subagent #5 (fresh context)                                 │
+│ • Verifies all issues resolved                              │
+│ • Confirms build success                                    │
+│ • Documents final review in:                                │
+│   .github/docs/SubAgent docs/[FEATURE_NAME]_review_final.md │
+│ • Returns: APPROVED / NEEDS_FURTHER_REFINEMENT              │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+                ┌──────────┴──────────┐
+                │ Approved?           │
+                └──────────┬──────────┘
+                           │
+                ┌──────────┴──────────┐
+                │                     │
+               NO                    YES
+                │                     │
+                ↓                     ↓
+      (Return to Phase 4)     ┌─────────────────────────────────────────────┐
+                              │ ORCHESTRATOR: Begin Phase 6                 │
+                              └─────────────────────────────────────────────┘
+                                                ↓
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 6: PREFLIGHT VALIDATION (FINAL GATE)                  │
+│ Orchestrator executes project-level preflight checks        │
+│                                                             │
+│ Step 1: Detect preflight script                             │
+│   • scripts/preflight.sh                                    │
+│   • scripts/preflight.ps1                                   │
+│   • make preflight                                          │
+│   • npm run preflight                                       │
+│   • cargo preflight                                         │
+│                                                             │
+│ Step 2: If preflight EXISTS                                 │
+│   • Execute script                                          │
+│   • Capture exit code + full output                         │
+│   • Exit code 0 REQUIRED                                    │
+│                                                             │
+│ Step 3: If preflight DOES NOT EXIST                         │
+│   • Spawn Research subagent to design minimal preflight     │
+│   • Spawn Implementation subagent to create it              │
+│   • Re-run Phase 6                                          │
+│                                                             │
+│ Enforcement defined by project script (CI-aligned)          │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+                  ┌────────┴────────────┐
+                  │ Preflight Pass?     │
+                  │ (Exit code == 0)    │
+                  └────────┬────────────┘
+                           │
+                ┌──────────┴──────────┐
+                │                     │
+               NO                    YES
+                │                     │
+                ↓                     ↓
+┌─────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR: Spawn refinement (max 2 cycles)               │
+│ • Treat preflight failures as CRITICAL                      │
+│ • Pass full preflight output to refinement subagent         │
+└──────────────────────────┬──────────────────────────────────┘
+                           ↓
+                (Return to Phase 4 → Phase 5 → Phase 6)
+                                                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│ ORCHESTRATOR: Report completion to user                     │
+│ "All checks passed. Code is ready to push to GitHub."       │
+└─────────────────────────────────────────────────────────────┘
 ---
 
 # Subagent Tool Usage
@@ -363,7 +494,3 @@ YOU MUST NEVER:
 - Preflight failure overrides review approval
 - No work considered complete until Phase 6 passes
 - CI pipeline should succeed if preflight succeeds locally
-
----
-
-# END OF UNIVERSAL ORCHESTRATOR TEMPLATE
