@@ -1,0 +1,30 @@
+I am providing you with an Orchestrator Agent template.
+
+Your task:
+Customize it for THIS repository without changing its logic, structure, rules, or workflow.
+
+Instructions:
+1. Analyze the repository structure.
+2. Detect:
+   - Project name
+   - Primary languages
+   - Frameworks
+   - Build system
+   - Test commands
+   - Package manager
+   - Architecture patterns
+3. Fill in all [PLACEHOLDER] variables in the template.
+4. Add project-specific build and validation instructions in the Review Phase.
+5. DO NOT modify:
+   - Workflow phases
+   - Subagent structure
+   - Absolute rules
+   - Refinement loop logic
+   - Scoring system
+6. DO NOT simplify or restructure anything.
+7. Only replace placeholders and inject project-specific technical details.
+8. Output the finalized version ready to save as:
+   .github/copilot-instructions.md
+
+Here is the template:
+[PASTE TEMPLATE HERE]
