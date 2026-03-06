@@ -513,16 +513,36 @@ The project’s preflight script defines them.
 
 Spawn Commit Message generation.
 
-The Orchestrator must produce:
+The Orchestrator must produce a clean Git commit message using the exact structure below.
 
-1. One-line commit summary
-2. Description paragraph explaining the change
-3. List of modified files
+Output MUST follow this format:
 
-The commit summary must be a single concise line describing the change.
-The description must explain what was implemented and why.
+<ONE LINE COMMIT SUMMARY>
 
-The output must be formatted as a ready-to-use Git commit message.
+<DESCRIPTION PARAGRAPH EXPLAINING THE CHANGE>
+
+Modified Files:
+- path/to/file1
+- path/to/file2
+- path/to/file3
+
+Rules:
+
+• The FIRST line MUST be a one-line summary of the change  
+• The summary should be concise and ideally under 72 characters  
+• The SECOND section MUST be a short paragraph describing what was implemented and why  
+• The description should explain the change at a developer level  
+• The THIRD section MUST list all modified files collected from previous phases  
+
+Restrictions:
+
+• DO NOT include bullet-point summaries  
+• DO NOT include validation results  
+• DO NOT include build/test/preflight information  
+• DO NOT include review scores or grading tables  
+• ONLY output the three sections defined above  
+
+This output must be clean and copy-paste ready for use as a Git commit message.
 
 ---
 
