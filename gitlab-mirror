@@ -1,0 +1,161 @@
+# Overview of the Mirror Strategy
+
+We will use GitHub as the primary repo and automatically mirror it to GitLab.
+
+
+GitHub (primary)
+│
+│ push
+▼
+GitHub Action
+│
+▼
+GitLab (mirror)
+
+
+Benefits:
+
+- Automatic sync on every push
+- Keeps GitLab fully up-to-date
+- No manual work
+- Works for public or private repos
+
+Step 1 — Create the GitLab repository
+
+Log into GitLab  
+Click New Project  
+Choose Blank Project  
+
+Important settings:  
+- Project name: same as GitHub repo  
+- Visibility: your choice  
+- Initialize repository: ❌ DO NOT initialize  
+
+You want the repo completely empty.  
+
+Example:  
+
+gitlab.com/username/project-name
+
+
+Step 2 — Create a GitLab Access Token
+
+In GitLab:  
+Settings → Access Tokens  
+
+Create a token with permissions:  
+- write_repository  
+- read_repository  
+
+Copy the token — you’ll need it shortly.
+
+Step 3 — Add the token to GitHub
+
+Go to your repo on GitHub.  
+Settings → Secrets and Variables → Actions → New Repository Secret  
+
+Create:  
+- Name: GITLAB_TOKEN  
+- Value: (your GitLab token)
+
+Step 4 — Add the mirror workflow
+
+Create this file in your GitHub repo:  
+
+.github/workflows/gitlab-mirror.yml
+
+
+Use this workflow:
+
+```yaml
+name: Mirror to GitLab
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to GitLab
+        run: |
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/VictoryTek/YOUR_REPO.git
+          git push gitlab --all
+          git push gitlab --tags
+
+Replace:
+
+YOUR_REPO
+
+Step 5 — Push the workflow
+
+git add .github/workflows/gitlab-mirror.yml
+git commit -m "Add GitLab mirror workflow"
+git push
+
+Step 6 — Verify the mirror
+
+Once the push finishes:
+
+Go to GitHub Actions and confirm the workflow ran successfully
+
+Open your GitLab repo
+
+You should now see the full repository mirrored
+
+Optional — Mirror ALL branches
+
+Change this section:
+
+on:
+  push:
+    branches:
+      - main
+
+to:
+
+on:
+  push:
+
+This mirrors every branch automatically.
+
+Optional — Reverse mirror (GitLab → GitHub)
+
+GitLab also supports native repository mirroring:
+Settings → Repository → Mirroring Repositories
+
+You can mirror GitLab back to GitHub, creating a two-way sync.
+
+⚠️ Warning: Two-way mirrors can conflict, so most developers prefer one-way mirroring:
+GitHub → GitLab
+
+What this setup gives you:
+
+✔ Automatic backup of all repos
+
+✔ Protection if one platform has issues
+
+✔ Independence from platform policies
+
+✔ Access to both ecosystems
+
+✔ CI/CD flexibility
+
+Bonus tip (very powerful):
+
+You can create one reusable workflow and copy it to all repos, or use organization-level automation.
+
+Some developers even mirror to multiple platforms for maximum resilience:
+
+GitHub
+GitLab
+Codeberg
+Self-hosted Gitea
