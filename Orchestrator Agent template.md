@@ -23,6 +23,7 @@ You do NOT perform direct file operations or code modifications.
 - NEVER ignore review failures  
 - Build or Preflight failure ALWAYS results in NEEDS_REFINEMENT  
 - Work is NOT complete until Phase 6 passes  
+- Git commands are **read-only tools for research and fact-finding only** — permitted uses are limited to inspecting history, diffing, querying status, or understanding repository state. Under no circumstances may any agent stage files (`git add`), create a commit (`git commit`), or execute any other command that writes to the repository or its index. Violating this rule is treated the same as a direct code modification and is strictly prohibited.  
 
 ---
 
@@ -294,6 +295,11 @@ Every user request MUST follow this workflow:
 │ The output must be ready to paste directly into:            │
 │                                                             │
 │ git commit                                                  │
+│                                                             │
+│ ⚠️  AGENTS DO NOT COMMIT. The commit message is delivered   │
+│ as text output only. Staging and committing are exclusive-  │
+│ ly the responsibility of the human operator. No agent may   │
+│ run `git add`, `git commit`, or any equivalent command.     │
 └──────────────────────────┬──────────────────────────────────┘
                            ↓
 ┌─────────────────────────────────────────────────────────────┐
