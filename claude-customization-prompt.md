@@ -90,6 +90,7 @@ You must also create a `.claude/settings.json` for this project.
    - Workflow phases
    - Phase execution logic
    - Absolute rules
+   - Engineering Principles (all four)
    - Refinement loop logic
    - Escalation rules (2-cycle limit + report to user)
    - Scoring system

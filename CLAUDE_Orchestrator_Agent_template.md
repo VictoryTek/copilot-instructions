@@ -297,21 +297,6 @@ Every user request MUST follow this workflow:
 
 ---
 
-## Documentation Standard
-
-All phase documentation must be stored in:
-
-```
-.github/docs/subagent_docs/
-```
-
-Required files per feature:
-- `[feature]_spec.md`
-- `[feature]_review.md`
-- `[feature]_review_final.md`
-
----
-
 ## PHASE 1: Research & Specification
 
 **Execute before any implementation begins.**
@@ -320,7 +305,7 @@ Required files per feature:
 
 - Analyze relevant code in the repository to understand the current implementation
 - Identify files and components affected by the requested feature or change
-- Research a minimum of 6 credible sources for best practices and modern implementation patterns
+- Research relevant documentation, prior art, and best practices as needed for a well-informed design decision
 - **CRITICAL — Before proposing any new dependency, framework, or external library:**
   - Use `resolve-library-id` to obtain the Context7-compatible library identifier
   - Use `get-library-docs` to fetch the latest official documentation
@@ -328,8 +313,7 @@ Required files per feature:
   - Identify and avoid deprecated or outdated patterns
 - **CRITICAL — Before proposing any build, test, or validation command:**
   - Check the command against FORBIDDEN COMMANDS — if listed, do not propose it
-  - Assess the command's resource cost against documented Resource Constraints
-  - If a command could exhaust RAM, disk, or time budgets, propose a safe alternative and document the reasoning in the spec
+  - If a command could exhaust resources or has destructive side effects, propose a safe alternative
 - Design the architecture and implementation approach
 
 ### Output
@@ -346,7 +330,6 @@ Spec must include:
 - Implementation steps
 - Dependencies (including Context7-verified libraries and versions)
 - Configuration changes if applicable
-- Build/test commands to be used in Phase 3 (with resource cost assessment)
 - Risks and mitigations
 
 ### Returns
@@ -370,13 +353,7 @@ Spec must include:
 - Maintain consistency with existing project structure and coding patterns
 - Ensure build compatibility and successful compilation
 - Add appropriate comments and documentation where needed
-- **CRITICAL — Verify dependencies and external APIs using Context7:**
-  - For each dependency or external library in the specification:
-    - Use `resolve-library-id` to confirm the correct Context7 library identifier
-    - Use `get-library-docs` to retrieve the latest official documentation
-  - Ensure implementation follows current API standards
-  - Avoid deprecated functions or outdated integration patterns
-  - Confirm configuration and initialization follow official documentation
+- **CRITICAL — Verify all external dependencies using Context7** (see Dependency Policy above) before implementing any integration
 - Update project documentation if new configuration or usage patterns are introduced
 - **CRITICAL: Do NOT run any FORBIDDEN COMMANDS**
 
@@ -405,7 +382,7 @@ Review the implemented code against all of the following:
 5. **Completeness** — all requirements addressed
 6. **Performance** — no regressions or inefficiencies introduced
 7. **Security** — no new vulnerabilities introduced
-8. **API Currency (Context7)** — verify that any external library usage matches the latest official API patterns referenced in the spec
+8. **API Currency** — any external library usage matches the latest official API patterns (verify via Context7 if needed)
 9. **Build Validation:**
    - Run ONLY the build and test commands approved in the Phase 1 spec
    - Do NOT run any command not listed in the spec or listed under FORBIDDEN COMMANDS
@@ -536,18 +513,7 @@ This is a structural gap that must be resolved before work can complete.
 
 ### Preflight Enforcement
 
-Preflight script may include:
-- Build verification (safe, targeted commands only)
-- Test execution
-- Coverage threshold
-- Lint checks
-- Formatting checks
-- Security scans
-- Dependency audits
-- Container build validation
-- Supply chain checks
-
-All commands in the preflight script MUST comply with Resource Constraints and must not appear in FORBIDDEN COMMANDS.
+The preflight script defines its own checks. At minimum it should verify that the build passes and no FORBIDDEN COMMANDS are used. All commands must comply with Resource Constraints.
 
 ---
 
