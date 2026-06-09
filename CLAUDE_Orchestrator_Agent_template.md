@@ -24,6 +24,9 @@ You do NOT perform quick fixes, skip phases, or declare completion before Phase 
   the current state with a git or build tool command
 - Guessing repository or system state wastes the user's tokens and trust —
   when in doubt, CHECK FIRST, then speak
+- NEVER run `git add`, `git commit`, `git push`, `git stash`, or any git command that
+  stages, commits, pushes, or stashes changes — Phase 7 produces a commit message for
+  the USER to run; all git write operations are the user's responsibility, not Claude's
 - After 2 failed refinement cycles, STOP and report full findings to the user — do NOT loop silently
 
 ---
@@ -36,6 +39,66 @@ You do NOT perform quick fixes, skip phases, or declare completion before Phase 
 - [FORBIDDEN_COMMAND_2] — reason: [WHY_FORBIDDEN]
 
 > If no forbidden commands apply, remove this section and note "None identified" in the spec.
+
+---
+
+## 🧠 Engineering Principles
+
+These principles govern how you think and act throughout every phase.
+They apply to all implementation, review, and refinement work.
+
+### 1. Think Before Coding — Surface Assumptions and Tradeoffs
+
+Before implementing anything:
+- State your assumptions explicitly. If uncertain, ask before proceeding.
+- If multiple valid interpretations exist, present them — do NOT pick one silently.
+- If a simpler approach exists, say so and push back. Simpler is correct.
+- If something is genuinely unclear, stop. Name exactly what is confusing. Ask.
+
+Do not resolve ambiguity by making a silent choice and hoping it was right.
+
+### 2. Simplicity First — Minimum Code That Solves the Problem
+
+Write the minimum code that satisfies the requirement. Nothing speculative.
+
+- No features beyond what was explicitly asked for.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that was not requested.
+- No error handling for scenarios that cannot occur.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Test: "Would a senior engineer call this overcomplicated?" If yes, simplify before proceeding.
+
+### 3. Surgical Changes — Touch Only What You Must
+
+When editing existing code:
+- Do NOT improve adjacent code, comments, or formatting that is not part of the task.
+- Do NOT refactor things that are not broken.
+- Match the existing style, even if you would do it differently.
+- If you notice unrelated dead code, mention it in your summary — do NOT delete it.
+
+When your changes create orphans:
+- Remove imports, variables, and functions that YOUR changes made unused.
+- Do NOT remove pre-existing dead code unless explicitly asked.
+
+Test: Every changed line must trace directly to the user's request. If it cannot, revert it.
+
+### 4. Goal-Driven Execution — Define Success Before Starting
+
+Transform every task into a verifiable goal before implementing:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Confirm tests pass before and after, with no behaviour change"
+
+For multi-step tasks, state a brief execution plan before beginning:
+```
+1. [Step] → verify: [how to confirm it worked]
+2. [Step] → verify: [how to confirm it worked]
+3. [Step] → verify: [how to confirm it worked]
+```
+
+Weak success criteria ("make it work") require constant clarification and produce rewrites.
+Strong success criteria let you verify completion independently.
 
 ---
 
@@ -84,10 +147,14 @@ Package Manager(s): **[PACKAGE_MANAGERS]**
 
 ### Resource Constraints
 
-<!-- IMPORTANT: Document machine/environment limits that affect which commands are safe to run -->
-- RAM: [AVAILABLE_RAM] — avoid commands that evaluate all targets in parallel if RAM < [THRESHOLD]
-- Disk: [AVAILABLE_DISK]
-- CI environment: [CI_ENVIRONMENT] (e.g. GitHub Actions free tier, self-hosted, local only)
+<!-- Document project-structural constraints that affect which commands are safe to run.
+     Do NOT record host RAM, free disk, or CPU counts — these vary per developer machine
+     and would be wrong on any other device. Only facts that are permanently true about
+     the codebase or CI environment belong here. -->
+- CI environment: [CI_ENVIRONMENT] (e.g. GitHub Actions free tier, self-hosted, Docker-based)
+- OS requirements: [OS_REQUIREMENTS] (e.g. Linux-only due to libpam-dev; WASM target requires wasm-pack)
+- Build layout constraints: [BUILD_LAYOUT] (e.g. bare `cargo build` fails — must target a specific package)
+- Large disk side-effects: [DISK_SIDE_EFFECTS] (e.g. Docker multi-stage builds produce multi-GB layers)
 - Other constraints: [OTHER_CONSTRAINTS]
 
 ### Repository Notes

@@ -19,21 +19,26 @@ You must also create a `.claude/settings.json` for this project.
    - Key directories
    - Special constraints
 
-3. Fill in the Resource Constraints section:
-   - Detect available RAM using the appropriate method for this OS:
-     - Linux: read `/proc/meminfo`
-     - macOS: run `sysctl hw.memsize`
-     - Windows: run `wmic OS get TotalVisibleMemorySize`
-     - If all three fail or the environment is unknown: ask the user before proceeding
-   - Identify any commands that evaluate all targets in parallel and assess
-     whether they are safe given the available RAM
-   - Document any disk, network, or CI environment constraints
+3. Fill in the Resource Constraints section — project-structural facts only:
+   - Do NOT detect or record host RAM, free disk, or CPU counts. These vary per developer
+     machine and would be wrong on any other device the project is developed on.
+   - Instead, identify constraints that are permanently true about the codebase itself:
+     - Does the build system or workspace layout make certain commands unsafe on any machine?
+       (e.g. bare `cargo build` fails because the workspace has no default member)
+     - Are any targets or features OS-specific or require optional system libraries?
+       (e.g. a crate that only compiles on Linux due to libpam-dev)
+     - Does building require a specific toolchain or target not universally available?
+       (e.g. WASM target requires wasm-pack; cross-compilation requires a sysroot)
+     - What is the CI environment type? (GitHub Actions free tier, self-hosted, Docker-based, local only)
+     - Are there any commands with large disk side-effects?
+       (e.g. Docker multi-stage builds produce multi-GB layers)
 
 4. Fill in the FORBIDDEN COMMANDS section:
-   - For each build or test command you would normally add, assess its resource cost:
-     a. Does it evaluate all project targets in parallel?
-     b. Could it exhaust available RAM or disk on this machine?
-     c. Does it have destructive or irreversible side effects?
+   - For each build or test command you would normally add, assess whether it is structurally unsafe:
+     a. Does it evaluate all project targets in parallel in a way that is known to cause failures
+        (e.g. evaluates 30 NixOS configurations simultaneously)?
+     b. Does it have destructive or irreversible side effects?
+     c. Is it broken by the project's workspace or build layout on any machine?
    - If YES to any of the above: add it to FORBIDDEN COMMANDS with a clear reason,
      and find a safe alternative for the Test Commands section.
    - If NO to all: it is safe to add to Test Commands.
@@ -65,6 +70,10 @@ You must also create a `.claude/settings.json` for this project.
            "Bash(<safe-test-command>:*)"
          ],
          "deny": [
+           "Bash(git add:*)",
+           "Bash(git commit:*)",
+           "Bash(git push:*)",
+           "Bash(git stash:*)",
            "Bash(<forbidden-command>:*)",
            "Bash(rm -rf:*)"
          ]
@@ -72,6 +81,8 @@ You must also create a `.claude/settings.json` for this project.
      }
      ```
    - `rm -rf` must always be in `deny` regardless of project type
+   - `git add`, `git commit`, `git push`, and `git stash` must always be in `deny` — git
+     operations that stage, commit, push, or stash are the user's responsibility, never Claude's
    - Do not include commands in `allow` that appear in `deny`
    - After writing the file, confirm its path: `.claude/settings.json`
 
