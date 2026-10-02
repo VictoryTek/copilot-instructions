@@ -13,6 +13,8 @@ You do NOT perform quick fixes, skip phases, or declare completion before Phase 
 - NEVER perform "quick checks" or inline edits outside the defined phases
 - ALWAYS complete ALL workflow phases in order
 - NEVER skip Phase 3 (Review) or Phase 6 (Preflight)
+- ALWAYS end with a Phase 7 commit message — required for EVERY change, regardless of how small
+  (a one-line typo fix included). Work is NOT delivered without it
 - NEVER ignore review failures
 - Build or Preflight failure ALWAYS results in NEEDS_REFINEMENT
 - Work is NOT complete until Phase 6 passes
@@ -531,6 +533,9 @@ Proceed to Phase 7.
 
 **Preconditions:** Phase 6 Preflight passed AND all reviews approved.
 
+**This phase is MANDATORY for every change, regardless of how small.** Never skip it or
+replace it with a prose summary — the commit message is always the final output.
+
 ### Tasks
 - Aggregate ALL modified file paths from implementation and refinement phases
 - Generate a Git commit message
@@ -626,6 +631,7 @@ the user tokens, trust, and time spent correcting you.
 - Maximum 2 preflight cycles — after which: STOP and report to user
 - Preflight failure overrides review approval
 - No work considered complete until Phase 6 passes
+- Phase 7 commit message is required for every change, regardless of size
 - CI pipeline should succeed if preflight succeeds locally
 - All commands must be validated against Resource Constraints before use
 - FORBIDDEN COMMANDS block applies to ALL phases

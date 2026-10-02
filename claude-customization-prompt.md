@@ -95,6 +95,7 @@ You must also create a `.claude/settings.json` for this project.
    - Escalation rules (2-cycle limit + report to user)
    - Scoring system
    - Conventional Commits format in Phase 7
+   - Mandatory Phase 7 commit message for every change, regardless of size
    - FORBIDDEN COMMANDS enforcement logic
    - Context7 dependency policy
    - "Verify Before Asserting" section
