@@ -1,111 +1,265 @@
-# CLAUDE.md Customization Prompt
+# CLAUDE.md Customization Prompt (v3)
 
-I am providing you with a CLAUDE.md Orchestrator Agent template.
+I am providing you with a CLAUDE.md Engineering Agent template.
 Your task: Customize it for THIS repository without changing its logic, structure, rules, or workflow.
-You must also create a `.claude/settings.json` for this project.
+You must also create (or update) `.claude/settings.json`, a `.claude/hooks/verify.sh` Stop hook, and a `.claude/agents/reviewer.md` review subagent for this project.
+
+This prompt works in two modes:
+- **FRESH**: the repository has no `CLAUDE.md`. Build one from the template.
+- **UPDATE**: the repository already has a `CLAUDE.md` (any older format). Migrate it to this template and keep everything that is specific to this repository.
+
+The goal is a short CLAUDE.md that holds only what Claude cannot work out from the code, with anything that must always happen enforced by settings and hooks instead of prose.
 
 ## Instructions
 
-1. Analyze the repository structure.
+### Step 0. Detect the mode
 
-2. Detect and fill in:
-   - Project name
-   - Primary languages
-   - Frameworks
-   - Build system
-   - Test commands (safe ones only — see step 4)
-   - Package manager
-   - Architecture patterns
-   - Key directories
-   - Special constraints
+Check the repository root for:
+- `CLAUDE.md`
+- `.claude/settings.json`
+- `.claude/hooks/verify.sh`
+- `.claude/agents/reviewer.md`
+- `AGENTS.md` and `.github/copilot-instructions.md` (read for context only; do not modify them)
 
-3. Fill in the Resource Constraints section — project-structural facts only:
-   - Do NOT detect or record host RAM, free disk, or CPU counts. These vary per developer
-     machine and would be wrong on any other device the project is developed on.
-   - Instead, identify constraints that are permanently true about the codebase itself:
-     - Does the build system or workspace layout make certain commands unsafe on any machine?
-       (e.g. bare `cargo build` fails because the workspace has no default member)
-     - Are any targets or features OS-specific or require optional system libraries?
-       (e.g. a crate that only compiles on Linux due to libpam-dev)
-     - Does building require a specific toolchain or target not universally available?
-       (e.g. WASM target requires wasm-pack; cross-compilation requires a sysroot)
-     - What is the CI environment type? (GitHub Actions free tier, self-hosted, Docker-based, local only)
-     - Are there any commands with large disk side-effects?
-       (e.g. Docker multi-stage builds produce multi-GB layers)
+Then state in one line which mode applies (FRESH or UPDATE) and what already exists.
 
-4. Fill in the FORBIDDEN COMMANDS section:
-   - For each build or test command you would normally add, assess whether it is structurally unsafe:
-     a. Does it evaluate all project targets in parallel in a way that is known to cause failures
-        (e.g. evaluates 30 NixOS configurations simultaneously)?
-     b. Does it have destructive or irreversible side effects?
-     c. Is it broken by the project's workspace or build layout on any machine?
-   - If YES to any of the above: add it to FORBIDDEN COMMANDS with a clear reason,
-     and find a safe alternative for the Test Commands section.
-   - If NO to all: it is safe to add to Test Commands.
-   - If no forbidden commands are identified: write "None identified" and remove the placeholder lines.
+- No `CLAUDE.md` → **FRESH mode**. Skip Step 1. (If an `AGENTS.md` exists, read it for repo-specific facts and rules to carry into Project-specific rules; leave the file itself alone.)
+- `CLAUDE.md` exists → **UPDATE mode**. Do Step 1 first.
 
-5. Add project-specific build validation steps to the PHASE 3 section
-   using ONLY the safe commands identified in step 4.
+### Step 1. UPDATE mode only — read and sort the existing CLAUDE.md
 
-6. Create `.claude/settings.json` at the repository root with the following content:
-   - Always include `"effortLevel": "medium"` as the baseline
-   - Under `"permissions"`:
-     - `"allow"`: list the safe build, test, git, and read commands identified in steps 4 and 5
-       that Claude will run repeatedly during normal workflow execution — so the extension
-       does not prompt for approval on every tool call
-     - `"deny"`: list every command from FORBIDDEN COMMANDS so the extension enforces
-       the same prohibition at the tool-call level, as a second layer of protection
-       beyond the CLAUDE.md instruction
-   - Use the pattern `"Bash(<command-prefix>:*)"` for each entry
-   - Example structure:
-     ```json
-     {
-       "effortLevel": "medium",
-       "permissions": {
-         "allow": [
-           "Bash(git status:*)",
-           "Bash(git log:*)",
-           "Bash(git diff:*)",
-           "Bash(<safe-build-command>:*)",
-           "Bash(<safe-test-command>:*)"
-         ],
-         "deny": [
-           "Bash(git add:*)",
-           "Bash(git commit:*)",
-           "Bash(git push:*)",
-           "Bash(git stash:*)",
-           "Bash(<forbidden-command>:*)",
-           "Bash(rm -rf:*)"
-         ]
-       }
-     }
-     ```
-   - `rm -rf` must always be in `deny` regardless of project type
-   - `git add`, `git commit`, `git push`, and `git stash` must always be in `deny` — git
-     operations that stage, commit, push, or stash are the user's responsibility, never Claude's
-   - Do not include commands in `allow` that appear in `deny`
-   - After writing the file, confirm its path: `.claude/settings.json`
+Read the whole existing file before changing anything. Sort its content into three groups:
 
-7. DO NOT modify:
-   - Workflow phases
-   - Phase execution logic
-   - Absolute rules
-   - Engineering Principles (all four)
-   - Refinement loop logic
-   - Escalation rules (2-cycle limit + report to user)
-   - Scoring system
-   - Conventional Commits format in Phase 7
-   - Mandatory Phase 7 commit message for every change, regardless of size
-   - FORBIDDEN COMMANDS enforcement logic
-   - Context7 dependency policy
-   - "Verify Before Asserting" section
+**A. Keep (repo-specific content).** Carry this into the new file, in the original author's wording:
+- Project name, type, languages, frameworks, package managers
+- Build, test, and preflight commands that still exist in the repo (check them against `package.json`, `Makefile`, `flake.nix`, `Cargo.toml`, CI config, etc.; if a command is no longer there, do not carry it over and list it as stale in the report)
+- FORBIDDEN COMMANDS and their reasons (project-specific ones only; the template's Universal git block replaces any git entries)
+- Resource constraints, key directories, architecture notes, special constraints
+- Any repo-specific rule, convention, or gotcha that Claude could not work out from the code. Put these under **Project-specific rules**.
 
-8. DO NOT simplify or restructure anything.
+**B. Replace (generic workflow content).** Discard the old version's generic process and use the template's instead. This includes old phase definitions, scoring tables, spec/review file requirements (for example `.github/docs/subagent_docs/`), minimum-source research rules, and generic engineering principles. Do not delete files the old workflow created in the repository; just tell the user they are no longer required.
 
-9. Only replace placeholders and inject project-specific technical details.
+**C. Drop as derivable.** Do not carry over lines that only restate what Claude can read from the code or already does by default: file-by-file descriptions, standard language conventions, "write clean code", detailed API documentation. List what you dropped in the report so the user can restore anything. If you are unsure whether a rule is derivable, keep it.
 
-10. Output the finalized `CLAUDE.md` ready to save at the repository root,
-    then confirm that `.claude/settings.json` has been written.
+**D. Conflicts.** If an old repo-specific rule contradicts a template rule (for example "always write a spec file", or "commit directly"), the template wins. Do not silently drop the old rule: list it in the report so the user can decide.
+
+If the existing `CLAUDE.md` is untracked or has uncommitted changes (`git status --porcelain CLAUDE.md`), save a copy as `CLAUDE.md.bak` before overwriting it. If it is tracked and clean, git already holds the old version; no backup is needed.
+
+### Step 2. Analyze the repository
+
+Analyze the repository structure. In UPDATE mode, use the existing file as the starting point and verify it against the repo. In FRESH mode, infer everything from the repo itself (README, manifests, flake, Makefile, CI config, directory layout).
+
+Do not invent commands. If the repo is new or sparse and a build or test command does not exist yet, write "None yet — add when the build system is set up" for that line instead of guessing.
+
+### Step 3. Detect and fill in the placeholders
+
+Fill in:
+- `[PROJECT_NAME]`, `[PROJECT_TYPE]`, `[LANGUAGES]`, `[FRAMEWORKS]`, `[PACKAGE_MANAGERS]`
+- `[BUILD_COMMAND_n]` and `[TEST_COMMAND_n]`: safe ones only (see Step 5). Add or remove lines as needed.
+- `[PREFLIGHT_COMMAND]`: the repo's preflight script or command if one exists (`scripts/preflight.sh`, `scripts/preflight.ps1`, `make preflight`, `npm run preflight`, `cargo preflight`). If none exists, write "None — run Build and Test commands as the gate".
+- `[VERIFY_COMMAND]`: the single fastest safe command that reliably catches a broken change. Prefer the preflight command if it normally completes in under about five minutes. Otherwise use the safe build command plus the safe unit-test command chained with `&&`. If no safe command exists yet, write "None yet" (this also means Step 7 is skipped).
+- `[KEY_DIRECTORY_n]`, `[ARCHITECTURE_PATTERN]`, `[SPECIAL_CONSTRAINT_n]`
+- `[PROJECT_SPECIFIC_RULES]`: the group A rules from Step 1. In FRESH mode, or if there are none, remove the entire "Project-specific rules" section.
+
+### Step 4. Fill in the constraints — project-structural facts only
+
+- Do NOT detect or record host RAM, free disk, or CPU counts. These vary per developer machine and would be wrong on any other device.
+- Instead, identify constraints that are permanently true about the codebase itself:
+  - Does the build system or workspace layout make certain commands unsafe on any machine? (e.g. bare `cargo build` fails because the workspace has no default member)
+  - Are any targets or features OS-specific or dependent on optional system libraries? (e.g. a crate that only compiles on Linux due to libpam-dev)
+  - Does building require a specific toolchain or target not universally available? (e.g. WASM target requires wasm-pack; cross-compilation requires a sysroot)
+  - What is the CI environment type? (GitHub Actions free tier, self-hosted, Docker-based, local only)
+  - Are there commands with large disk side-effects? (e.g. Docker multi-stage builds produce multi-GB layers)
+- Map your findings onto the template placeholders: `[BUILD_LAYOUT]` (build layout constraints), `[OS_REQUIREMENTS]`, `[CI_ENVIRONMENT]`, `[DISK_SIDE_EFFECTS]`, and `[OTHER_CONSTRAINTS]`.
+- Write "None identified" for any line that does not apply.
+
+### Step 5. Fill in the Forbidden commands section
+
+The template's **Universal (all repositories)** block is already complete. Copy it exactly as written. Do not remove, reword, or add to it. In UPDATE mode, if the old file listed any of those git commands in its own forbidden list, do not repeat them under Project-specific.
+
+Everything below applies only to the **Project-specific** list. For each build or test command you would normally add, assess whether it is structurally unsafe:
+  a. Does it evaluate all project targets in parallel in a way that is known to cause failures (e.g. evaluates 30 NixOS configurations simultaneously)?
+  b. Does it have destructive or irreversible side effects?
+  c. Is it broken by the project's workspace or build layout on any machine?
+
+- If YES to any: add it to the list with a clear reason, and find a safe alternative for the Test commands.
+- If NO to all: it is safe to add to Test commands.
+- In UPDATE mode, keep all existing project-specific forbidden commands and reasons, then add any new ones you find.
+- Replace `[FORBIDDEN_COMMAND_n]` with the command, `[WHY_FORBIDDEN]` with its reason, and `[SAFE_ALTERNATIVE]` with the command to use instead. Every entry needs a safe alternative; if there genuinely is none, write "none — ask the user". Add or remove lines as needed.
+- Also treat as forbidden any command that applies a configuration or change to a live system (for example `nixos-rebuild switch` or `nixos-rebuild boot`, `terraform apply`, `kubectl apply`): validation commands (dry-run, plan, diff) are the safe alternatives and applying is user-initiated.
+- If no project-specific forbidden commands are identified: write "None identified" and remove the placeholder lines.
+
+### Step 6. Create or update `.claude/settings.json`
+
+Create `.claude/settings.json` at the repository root. If the file already exists, **merge into it instead of replacing it**:
+- Keep every existing key and value (including any `env`, `model`, `hooks`, and MCP settings).
+- Keep every existing `allow` and `deny` entry.
+- Add the entries below that are missing.
+- Do not touch `.claude/settings.local.json`.
+
+Required content:
+- `"effortLevel": "medium"`. In UPDATE mode, keep the existing value if one is already set.
+- Under `"permissions"`:
+  - `"allow"`: the safe build, test, git read, and file read commands from Steps 3–5 that Claude will run repeatedly, so it is not prompted on every tool call
+  - `"deny"`: every command from the Project-specific forbidden list, so the tool layer enforces the same prohibition as a second layer of protection beyond the CLAUDE.md instruction
+- Use the pattern `"Bash(<command-prefix>:*)"` for each entry.
+- `rm -rf` must always be in `deny`.
+- Every command in the template's Universal forbidden block must always be in `deny`: `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git push:*)`, `Bash(git stash:*)`. These are the user's responsibility, never Claude's.
+- If a command appears in both `allow` and `deny`, remove it from `allow` (deny always wins) and mention it in the report.
+- Add the Stop hook entry from Step 7. If a `Stop` hook list already exists, append to it rather than replacing it.
+
+Example structure:
+```json
+{
+  "effortLevel": "medium",
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(<safe-build-command>:*)",
+      "Bash(<safe-test-command>:*)"
+    ],
+    "deny": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git stash:*)",
+      "Bash(<forbidden-command>:*)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/verify.sh",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Step 7. Create the Stop hook `.claude/hooks/verify.sh`
+
+The hook is a deterministic backstop: it stops Claude from finishing while the project's verify command fails. Create it only if `[VERIFY_COMMAND]` is a real command. Otherwise skip this step, remove the `hooks` entry from `settings.json`, and say so in the report.
+
+Write `.claude/hooks/verify.sh` with `[VERIFY_COMMAND]` substituted for `<VERIFY_COMMAND>`, then make it executable (`chmod +x`):
+
+```bash
+#!/usr/bin/env bash
+# Generated by the CLAUDE.md customization prompt.
+# Stop hook: blocks Claude from finishing while the verify command fails.
+input="$(cat)"
+
+# Claude was already sent back once by this hook. Let it stop and report instead of looping.
+if echo "$input" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true'; then
+  exit 0
+fi
+
+cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
+
+# Nothing changed in the working tree (or not a git repo): nothing to verify.
+[ -z "$(git status --porcelain 2>/dev/null)" ] && exit 0
+
+output="$(<VERIFY_COMMAND> 2>&1)"
+status=$?
+
+if [ "$status" -ne 0 ]; then
+  {
+    echo "Verification failed (exit $status). Fix the failures, then re-run:"
+    echo "  <VERIFY_COMMAND>"
+    echo "----"
+    echo "$output" | tail -n 60
+  } >&2
+  exit 2
+fi
+exit 0
+```
+
+Rules for this step:
+- The verify command must not be a forbidden command.
+- If `.claude/hooks/verify.sh` already exists and does NOT contain a line beginning "# Generated by the CLAUDE.md", do not overwrite it. Leave it alone, remove the Stop hook entry you would have added, and tell the user in the report.
+- If it exists and does contain that line (from this or an earlier version of this prompt), update it in place.
+- If the repository is not a git repository, still create the file but tell the user the hook only checks repositories that use git.
+- If the repo is Windows-only, write an equivalent `.ps1` hook instead and adjust the `command` accordingly.
+
+### Step 8. Create the review subagent `.claude/agents/reviewer.md`
+
+Tier 3 changes are reviewed by a fresh-context subagent so the work is not grading itself. Write the file below exactly as shown. Do not customize it. Create the `.claude/agents/` directory if needed.
+
+```markdown
+---
+name: reviewer
+description: Independent reviewer for Tier 3 changes. Reviews the diff in a fresh context against the approved plan and reports findings as CRITICAL or RECOMMENDED. Use before preflight on major changes.
+tools: Read, Grep, Glob, Bash
+---
+<!-- Generated by the CLAUDE.md customization prompt. -->
+You review a completed code change in a fresh context. You are given the approved plan and the list of changed files. Do not edit files. Do not run any command listed under "Forbidden commands" in the project's CLAUDE.md. Use `git diff` and `git status` to see the change.
+
+Check, in order:
+1. Plan compliance: does it do what was approved, and nothing more?
+2. Correctness: logic errors, edge cases, error handling that matters
+3. Simplicity and scope: code beyond what the task needs; changed lines that do not trace to the request
+4. Consistency: matches existing patterns and style
+5. Security: new vulnerabilities, secrets, unsafe input handling
+6. API currency: external library use matches current official documentation
+7. Verification: build and tests were run and passed (look for evidence in what you were given; run the project's safe test command if you can)
+
+Report only gaps that affect correctness or the stated requirements. Do not report style preferences. Label every finding:
+- CRITICAL: build or test failure, incorrect behaviour, security issue, deviation from the plan, or an unrequested change
+- RECOMMENDED: optional improvement (the author lists it for the user and does not implement it)
+
+End with exactly one line: PASS (no CRITICAL findings) or NEEDS_REFINEMENT.
+```
+
+Rules for this step:
+- If `.claude/agents/reviewer.md` already exists and does NOT contain the line "Generated by the CLAUDE.md", do not overwrite it. Leave it alone and tell the user in the report. (The template then falls back to a self-review.)
+- If it exists and does contain that line, replace it with the version above.
+
+### Step 9. DO NOT modify
+
+- Task size tiers and sizing rules
+- The four Principles
+- The "Done means verified" section, including the 2-cycle stop
+- The "Do not guess state" and "Dependencies and APIs" sections
+- The commit message section: the format, the checkmark-line rules, the closing line, and the rule that every change that modifies files ends with a commit message regardless of size
+- The Universal (all repositories) forbidden block and the forbidden-commands enforcement wording
+- The reviewer subagent text in Step 8
+
+### Step 10. DO NOT expand or restructure anything
+
+Only replace placeholders, inject repository-specific details, and remove HTML instruction comments (`<!-- ... -->`) once their sections are filled in. Do not add new sections, examples, or explanations.
+
+Keep the result short. The finished CLAUDE.md should land at roughly 100 to 150 lines plus any carried-over Project-specific rules. If the carried-over rules run past about 40 lines, keep only those Claude could not infer from the code. In the report, suggest moving area-specific groups into `.claude/rules/*.md` files with a `paths:` frontmatter list (they load only when Claude works on matching files) or into nested CLAUDE.md files. Do not create those files unasked.
+
+### Step 11. Output
+
+1. Write the finalized `CLAUDE.md` to the repository root.
+2. Confirm that `.claude/settings.json` was written (or merged), and, where created, `.claude/hooks/verify.sh` and `.claude/agents/reviewer.md`. Give their paths.
+3. Print a short report:
+   - **Mode:** FRESH or UPDATE
+   - **Length:** line count of the new CLAUDE.md (and of the old one, in UPDATE mode)
+   - **Commands chosen:** build, test, preflight, and verify commands
+   - **Forbidden commands:** what was added and why
+   - **UPDATE mode only:**
+     - Repo-specific rules carried over
+     - Old content dropped (generic workflow content that the template replaces)
+     - Content dropped as derivable
+     - Stale commands that were not carried over
+     - Conflicts between old rules and the template that the user should decide on
+     - Whether a `CLAUDE.md.bak` was created
+   - **Settings merge:** anything removed from `allow` because of a conflict with `deny`
+   - **Hook and reviewer:** created, updated, skipped, or left alone, and why
+   - **Needs your input:** placeholders you could not fill because the information is not in the repo
+   - **Suggested next step:** run `/doctor` to check the new file for content that can be derived from the code
+
+Do not run `git add`, `git commit`, `git push`, or `git stash`. Leave the files for the user to review with `git diff` and commit themselves.
 
 ---
 
