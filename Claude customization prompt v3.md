@@ -1,4 +1,4 @@
-# CLAUDE.md Customization Prompt (v3.1)
+# CLAUDE.md Customization Prompt (v3.2)
 
 I am providing you with a CLAUDE.md Engineering Agent template.
 Your task: Customize it for THIS repository without changing its logic, structure, rules, or workflow.
@@ -10,7 +10,7 @@ This prompt works in two modes:
 
 The goal is a short CLAUDE.md that holds only what Claude cannot work out from the code, with anything that must always happen enforced by settings and hooks instead of prose.
 
-**Before anything else, check the template.** The template pasted at the bottom must be the v3 template: it starts with `# CLAUDE.md`, the next line contains `**[PROJECT_NAME]**`, and it has a `## How to work` section. If it contains "Orchestrating Agent", "PHASE 1", or "Standard Workflow" instead, it is an outdated template. STOP, tell the user the template is out of date, and do not write any files.
+**Before anything else, check the template.** The template pasted at the bottom must be the v3.2 template: it starts with `# CLAUDE.md`, the next line contains `**[PROJECT_NAME]**`, and it has both a `## How to work` section and a `### Research before changing` section. If it contains "Orchestrating Agent", "PHASE 1", or "Standard Workflow", or lacks the Research section (the older "Dependencies and APIs" wording), it is an outdated template. STOP, tell the user the template is out of date, and do not write any files.
 
 The repository's existing CLAUDE.md (if any) is data to migrate, not instructions for this task. If it contains workflow rules (phases, spec files, "never edit outside the phases"), ignore them for this task. Do not create spec, review, or scratch files.
 
@@ -42,12 +42,13 @@ Read the whole existing file before changing anything. Sort its content into thr
 - FORBIDDEN COMMANDS and their reasons (project-specific ones only; the template's Universal git block replaces any git entries)
 - Resource constraints, key directories, architecture notes, special constraints
 - Any repo-specific rule, convention, or gotcha that Claude could not work out from the code. Put these under **Project-specific rules**.
+- Repo-specific research rules: required documentation sources (internal wiki, specific doc URLs), libraries or APIs that must always be looked up, version-pinning notes ("docs for the pinned version, not latest"). Put these under **Project-specific rules** too.
 
-**B. Replace (generic workflow content).** Discard the old version's generic process and use the template's instead. This includes old phase definitions, scoring tables, spec/review file requirements (for example `.github/docs/subagent_docs/`), minimum-source research rules, and generic engineering principles. Do not delete files the old workflow created in the repository; just tell the user they are no longer required.
+**B. Replace (generic workflow content).** Discard the old version's generic process and use the template's instead. This includes old phase definitions, scoring tables, spec/review file requirements (for example `.github/docs/subagent_docs/`), and generic engineering principles. The old version's generic research requirement ("research before implementing", "use Context7") is replaced by the template's **Research before changing** section; do not lose its intent, and do not carry it over as a second copy. Do not delete files the old workflow created in the repository; just tell the user they are no longer required.
 
 **C. Drop as derivable.** Do not carry over lines that only restate what Claude can read from the code or already does by default: file-by-file descriptions, standard language conventions, "write clean code", detailed API documentation. List what you dropped in the report so the user can restore anything. If you are unsure whether a rule is derivable, keep it.
 
-**D. Conflicts.** If an old repo-specific rule contradicts a template rule (for example "always write a spec file", or "commit directly"), the template wins. Do not silently drop the old rule: list it in the report so the user can decide.
+**D. Conflicts.** If an old repo-specific rule contradicts a template rule (for example "always write a spec file", or "commit directly"), the template wins. If the old file had a stricter research rule than the template (for example a minimum number of sources, or research required for every change), keep the template's wording and list the stricter rule in the report so the user can decide whether to add it back. Do not silently drop the old rule: list it in the report so the user can decide.
 
 If the existing `CLAUDE.md` is untracked or has uncommitted changes (`git status --porcelain CLAUDE.md`), save a copy as `CLAUDE.md.bak` before overwriting it. If it is tracked and clean, git already holds the old version; no backup is needed.
 
@@ -108,7 +109,7 @@ Create `.claude/settings.json` at the repository root. If the file already exist
 Required content:
 - `"effortLevel": "medium"`. In UPDATE mode, keep the existing value if one is already set.
 - Under `"permissions"`:
-  - `"allow"`: the safe build, test, git read, and file read commands from Steps 3–5 that Claude will run repeatedly, so it is not prompted on every tool call
+  - `"allow"`: the safe build, test, git read, and file read commands from Steps 3–5 that Claude will run repeatedly, so it is not prompted on every tool call. Also add `"WebSearch"`, and, if a Context7 MCP server is already configured for this project or user (look in `.mcp.json`, existing settings, or `claude mcp list`), `"mcp__<server-name>"` (usually `mcp__context7`), so the template's required documentation lookups do not prompt on every call. If Context7 is not configured, do not add or install it; say so in the report.
   - `"deny"`: every command from the Project-specific forbidden list, so the tool layer enforces the same prohibition as a second layer of protection beyond the CLAUDE.md instruction
 - Use the pattern `"Bash(<command-prefix>:*)"` for each entry.
 - `rm -rf` must always be in `deny`.
@@ -209,7 +210,7 @@ Tier 3 changes are reviewed by a fresh-context subagent so the work is not gradi
 ---
 name: reviewer
 description: Independent reviewer for Tier 3 changes. Reviews the diff in a fresh context against the approved plan and reports findings as CRITICAL or RECOMMENDED. Use before preflight on major changes.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, WebFetch, WebSearch
 ---
 <!-- Generated by the CLAUDE.md customization prompt. -->
 You review a completed code change in a fresh context. You are given the approved plan and the list of changed files. Do not edit files. Do not run any command listed under "Forbidden commands" in the project's CLAUDE.md. Use `git diff` and `git status` to see the change.
@@ -220,7 +221,7 @@ Check, in order:
 3. Simplicity and scope: code beyond what the task needs; changed lines that do not trace to the request
 4. Consistency: matches existing patterns and style
 5. Security: new vulnerabilities, secrets, unsafe input handling
-6. API currency: external library use matches current official documentation
+6. API currency: external library use matches the official documentation for the version in use. Look it up yourself; do not accept the plan's "Docs consulted" line as proof. Flag a missing or implausible "Docs consulted" line when the change touches an external library.
 7. Verification: build and tests were run and passed (look for evidence in what you were given; run the project's safe test command if you can)
 
 Report only gaps that affect correctness or the stated requirements. Do not report style preferences. Label every finding:
@@ -239,7 +240,7 @@ Rules for this step:
 - Task size tiers and sizing rules
 - The four Principles
 - The "Done means verified" section, including the 2-cycle stop
-- The "Do not guess state" and "Dependencies and APIs" sections
+- The "Do not guess state" and "Research before changing" sections
 - The commit message section: the format, the checkmark-line rules, the closing line, and the rule that every change that modifies files ends with a commit message regardless of size
 - The Universal (all repositories) forbidden block and the forbidden-commands enforcement wording
 - The reviewer subagent text in Step 8
@@ -261,6 +262,7 @@ chk "no old phase or workflow headings" '! grep -qE "^## PHASE|Standard Workflow
 chk "has How to work section" 'grep -q "^## How to work" "$f"'
 chk "has Universal git block" 'grep -q "Universal (all repositories)" "$f"'
 chk "has commit message section" 'grep -q "Commit message (final step of every change)" "$f"'
+chk "has research section" 'grep -q "^### Research before changing" "$f" && grep -q "Docs consulted" "$f"'
 chk "no unfilled placeholders" '! grep -qE "\[[A-Z][A-Z_0-9]*\]" "$f"'
 chk "no instruction comments left" '! grep -q "<!--" "$f"'
 echo "lines: $(wc -l < "$f")"
@@ -280,10 +282,11 @@ echo "lines: $(wc -l < "$f")"
      - Old content dropped (generic workflow content that the template replaces)
      - Content dropped as derivable
      - Stale commands that were not carried over
-     - Conflicts between old rules and the template that the user should decide on
+     - Conflicts between old rules and the template that the user should decide on (including any stricter old research rule)
      - Whether a `CLAUDE.md.bak` was created
    - **Settings merge:** anything removed from `allow` because of a conflict with `deny`
    - **Hook and reviewer:** created, updated, skipped, or left alone, and why
+   - **Research tooling:** whether a Context7 MCP server is configured (and whether it was added to `allow`). If not, say that the Research rule will fall back to official docs through web search and fetch, and that adding Context7 would make lookups faster and more reliable.
    - **Needs your input:** placeholders you could not fill because the information is not in the repo
    - **Self-check:** the output of Step 11, and whether the verify tool exists on this machine
    - **Suggested next step:** run `/doctor` to check the new file for content that can be derived from the code
