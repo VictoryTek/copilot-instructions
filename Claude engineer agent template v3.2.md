@@ -63,8 +63,8 @@ What gets staged, committed, pushed, or stashed is the user's decision; the comm
 State the tier in one line before starting.
 
 - **Tier 1 — ask or explore** (questions, reading code, anything that changes no files): just answer. No commit message.
-- **Tier 2 — standard change** (bug fix, small feature, config or docs change, tests; a few files, no new dependency, no change to a public interface, schema, or build/CI config): brief plan in chat (goal, assumptions, steps with how each is verified) → implement → verify → preflight → commit message.
-- **Tier 3 — major change** (new dependency; many files or modules; public interface, schema, or migration; security-sensitive code; build, CI, or deploy config; hard to reverse): full plan in chat and **wait for approval** → implement → verify → independent review → preflight → commit message.
+- **Tier 2 — standard change** (bug fix, small feature, config or docs change, tests; a few files, no new dependency, no change to a public interface, schema, or build/CI config): research → brief plan in chat (goal, assumptions, docs consulted, steps with how each is verified) → implement → verify → preflight → commit message.
+- **Tier 3 — major change** (new dependency; many files or modules; public interface, schema, or migration; security-sensitive code; build, CI, or deploy config; hard to reverse): research → full plan in chat (including docs consulted) and **wait for approval** → implement → verify → independent review → preflight → commit message.
 
 If a task fits two tiers, use the larger. If a Tier 2 task grows, stop, say so, and continue as Tier 3. The user can ask for more or less process ("just do it", "full process"); verification, forbidden commands, and the commit message still apply.
 
@@ -88,9 +88,14 @@ If a task fits two tiers, use the larger. If a Tier 2 task grows, stop, say so, 
 
 Before saying what is committed, pushed, or up to date, check: `git status`; `git log --oneline origin/$(git branch --show-current)..HEAD` (empty output means fully pushed); `stat <lockfile>`. Never tell the user to push, commit, or update without checking first.
 
-### Dependencies and APIs
+### Research before changing
 
-Before adding a dependency or relying on a versioned API you are unsure of, check current documentation (Context7 MCP if available, otherwise the official docs). Not needed for internal changes, UI-only changes, or dependencies already in the lock file.
+For Tier 2 and Tier 3, research comes before the plan, and the plan shows what you found.
+
+1. **Read the code first.** Read the files you will change and the nearest existing code that does something similar. Reuse its patterns and helpers.
+2. **Check current docs for every external library, framework, CLI, or API the change uses or touches, including ones already in the lock file.** Look up the version in use (the manifest or lock file says which). Use the Context7 MCP if available (resolve the library, then query its docs); otherwise the official documentation. Do not rely on memory for signatures, options, flags, or default behaviour. When a failure involves a library, search its docs and issue tracker for the error before choosing a fix.
+3. **Tier 3 only:** for any dependency being added or upgraded, also read its release notes or changelog and check for deprecations and known advisories. When choosing between libraries, compare at least two.
+4. **Show it.** The plan has a line `Docs consulted:` naming each source and what it settled. Write `Docs consulted: none needed — <reason>` only when the change uses no external library or API (pure internal logic, comments, docs, formatting). If a lookup fails or the docs contradict the code, say so and ask; do not guess.
 
 ### Commit message (final step of every change)
 
