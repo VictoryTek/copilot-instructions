@@ -1,0 +1,66 @@
+Read CLAUDE.md and README first. Run the project's build, test suite, linter, and dependency audit (e.g. cargo clippy / cargo audit, npm audit, etc.) and use the real output as evidence. Do NOT modify any source files; the only file you may write is the findings file named below. Only report issues you have verified by reading the actual code paths involved. For each finding include: ID, priority (high/medium/low), confidence (high/medium/low), file(s) and line numbers, a short code excerpt or call-path trace as evidence, what goes wrong, and a suggested fix with effort (S/M/L). Drop anything speculative rather than padding the list. If the codebase is large, work module by module and say which areas you did not cover.
+
+
+
+
+
+Session 1: Architecture (IDs ARCH-01...)
+Read CLAUDE.md and README first. Run the project's build, test suite, linter, and dependency audit (e.g. cargo clippy / cargo audit, npm audit, etc.) and use the real output as evidence. Do NOT modify any source files; the only file you may write is the findings file named below. Only report issues you have verified by reading the actual code paths involved. For each finding include: ID, priority (high/medium/low), confidence (high/medium/low), file(s) and line numbers, a short code excerpt or call-path trace as evidence, what goes wrong, and a suggested fix with effort (S/M/L). Drop anything speculative rather than padding the list. If the codebase is large, work module by module and say which areas you did not cover.
+
+Analyze architecture and structure only:
+1. Architectural anti-patterns, tight coupling, leaky module boundaries
+2. Structural inconsistencies (naming, folder organization, layering)
+3. Inconsistent patterns: error handling, async, data flow, config, logging done differently in different places
+4. Half-implemented or abandoned code (stubs, TODO/FIXME, unused modules, feature flags that never flip)
+5. Dependencies that are unused, duplicated, misused, outdated, or unmaintained
+Write findings to ANALYSIS_ARCH.md.
+
+
+
+
+
+
+Session 2: Bugs & Quality (IDs BUG-01...)
+Read CLAUDE.md and README first. Run the project's build, test suite, linter, and dependency audit (e.g. cargo clippy / cargo audit, npm audit, etc.) and use the real output as evidence. Do NOT modify any source files; the only file you may write is the findings file named below. Only report issues you have verified by reading the actual code paths involved. For each finding include: ID, priority (high/medium/low), confidence (high/medium/low), file(s) and line numbers, a short code excerpt or call-path trace as evidence, what goes wrong, and a suggested fix with effort (S/M/L). Drop anything speculative rather than padding the list. If the codebase is large, work module by module and say which areas you did not cover.
+
+Analyze bugs and code quality only:
+1. Logic errors and unhandled edge cases (empty/null input, boundaries, off-by-one, time zones, overflow)
+2. Security: injection, authN/authZ gaps, secrets in code or logs, unsafe deserialization, path traversal, missing input validation, vulnerable dependencies
+3. Concurrency and resource problems: races, deadlocks, leaked connections/handles/memory, unbounded growth
+4. Performance: N+1 or unindexed queries, needless allocation/copying, blocking calls in async code, redundant work
+5. Error handling that is missing, inconsistent, or silently swallows failures
+6. Dead or redundant code
+7. Test gaps: critical paths with no tests, tests that assert nothing meaningful
+Write findings to ANALYSIS_BUGS.md.
+
+
+
+
+
+
+Session 3: Features (IDs FEAT-01...)
+Read CLAUDE.md and README first. Run the project's build and test suite so you understand what currently works, and use what you find as evidence. Do NOT modify any source files; the only file you may write is ANALYSIS_FEATURES.md. Only recommend features you have grounded in the actual code. For each recommendation include: ID (FEAT-01, FEAT-02, ...), priority (high/medium/low) based on value vs. effort, effort (S/M/L), the specific file(s) or data models that make it a natural fit, and a concrete description of the behavior. Drop anything generic that doesn't tie back to this codebase. If the codebase is large, work module by module and say which areas you did not cover.
+
+Suggest specific features worth building:
+1. Partially stubbed or clearly intended but unfinished features (cite TODOs, unused fields, dead routes)
+2. Features that naturally extend existing data models and code
+3. Gaps users of this kind of app would obviously expect (onboarding, backup/export, notifications, search, settings, observability)
+4. Integrations or automation the current structure is already set up for
+
+No full rearchitectures. Write the full findings to ANALYSIS_FEATURES.md in the project root.
+
+
+
+
+
+
+Session 4a: Consolidate (use your strongest model, plan mode)
+Read ANALYSIS_ARCH.md, ANALYSIS_BUGS.md, and ANALYSIS_FEATURES.md. Merge into MASTER_PLAN.md: dedupe (keep original IDs), re-verify any high-priority item against the code and drop or downgrade ones that don't hold up, then order by priority (security/data-loss bugs first), then by effort within each tier. Group related items into small batches that can be fixed together. Use checkboxes. Do not change source code.
+
+
+
+
+
+
+Session 4b: Execute (Sonnet is fine here)
+Work through MASTER_PLAN.md one batch at a time, starting at the top. For each batch: briefly state the planned change, apply it, run build/tests/linter, fix any regressions, then check the items off in MASTER_PLAN.md. Stop and ask only if a change is risky, ambiguous, or touches public behavior. When I say stop, give me ONE combined commit message covering everything done so far.
